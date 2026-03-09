@@ -8,10 +8,10 @@ export default function AboutPage() {
             <section className="container mx-auto px-4 py-20 md:py-32">
                 <div className="max-w-4xl mx-auto text-center animate-fade-in">
                     <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        About MediChain
+                        About Veridion
                     </h1>
                     <p className="text-xl md:text-2xl text-gray-600 leading-relaxed">
-                        We're on a mission to eliminate counterfeit medicines and save lives through blockchain technology
+                        We're on a mission to eliminate counterfeit products and save lives through blockchain technology
                     </p>
                 </div>
             </section>
@@ -25,13 +25,13 @@ export default function AboutPage() {
                         </div>
                         <h2 className="text-4xl font-bold mb-6">Protecting Lives Through Transparency</h2>
                         <p className="text-lg text-gray-600 mb-4 leading-relaxed">
-                            Every year, over 1 million people die from counterfeit medicines. This preventable tragedy
-                            affects the most vulnerable populations in developing countries, where up to 30% of medicines
+                            Every year, over 1 million people die from counterfeit products. This preventable tragedy
+                            affects the most vulnerable populations in developing countries, where up to 30% of products
                             may be fake.
                         </p>
                         <p className="text-lg text-gray-600 leading-relaxed">
-                            MediChain leverages blockchain technology to create an immutable, transparent record of every
-                            medicine batch from manufacturer to patient, making it impossible for counterfeit drugs to
+                            Veridion leverages blockchain technology to create an immutable, transparent record of every
+                            product batch from manufacturer to patient, making it impossible for counterfeit drugs to
                             enter the verified supply chain.
                         </p>
                     </div>
@@ -42,7 +42,7 @@ export default function AboutPage() {
                                 <div>
                                     <h3 className="text-2xl font-bold mb-2">Our Goal</h3>
                                     <p className="text-blue-100">
-                                        Eliminate counterfeit medicines globally by 2030
+                                        Eliminate counterfeit products globally by 2030
                                     </p>
                                 </div>
                             </div>
@@ -69,21 +69,21 @@ export default function AboutPage() {
                             <div className="text-5xl font-bold text-red-600 mb-3">$200B</div>
                             <p className="text-gray-700 font-semibold mb-2">Annual Market Size</p>
                             <p className="text-gray-600 text-sm">
-                                The global counterfeit medicine market continues to grow
+                                The global counterfeit product market continues to grow
                             </p>
                         </div>
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center">
                             <div className="text-5xl font-bold text-orange-600 mb-3">1M+</div>
                             <p className="text-gray-700 font-semibold mb-2">Deaths Per Year</p>
                             <p className="text-gray-600 text-sm">
-                                Lives lost due to fake and substandard medicines
+                                Lives lost due to fake and substandard products
                             </p>
                         </div>
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center">
                             <div className="text-5xl font-bold text-purple-600 mb-3">10-30%</div>
                             <p className="text-gray-700 font-semibold mb-2">Counterfeit Rate</p>
                             <p className="text-gray-600 text-sm">
-                                In developing countries, this percentage of medicines are fake
+                                In developing countries, this percentage of products are fake
                             </p>
                         </div>
                     </div>
@@ -96,8 +96,8 @@ export default function AboutPage() {
                     <h2 className="text-4xl font-bold text-center mb-12">Our Solution</h2>
                     <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl">
                         <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-                            MediChain uses <strong>blockchain technology</strong> to create a tamper-proof digital ledger
-                            that tracks every medicine batch throughout the supply chain. Each transaction is cryptographically
+                            Veridion uses <strong>blockchain technology</strong> to create a tamper-proof digital ledger
+                            that tracks every product batch throughout the supply chain. Each transaction is cryptographically
                             signed and permanently recorded, creating an unbreakable chain of custody.
                         </p>
                         <div className="grid md:grid-cols-2 gap-6 mt-8">
@@ -115,7 +115,7 @@ export default function AboutPage() {
                                 <div>
                                     <h3 className="font-bold text-lg mb-2">Global Accessibility</h3>
                                     <p className="text-gray-600">
-                                        Anyone can verify medicines from anywhere
+                                        Anyone can verify products from anywhere
                                     </p>
                                 </div>
                             </div>
@@ -181,7 +181,7 @@ export default function AboutPage() {
             {/* CTA */}
             <section className="container mx-auto px-4 py-20">
                 <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 text-center text-white shadow-2xl">
-                    <h3 className="text-3xl md:text-4xl font-bold mb-4">Join Us in Fighting Counterfeit Medicines</h3>
+                    <h3 className="text-3xl md:text-4xl font-bold mb-4">Join Us in Fighting Counterfeit Products</h3>
                     <p className="text-xl mb-8 text-blue-100">
                         Together, we can create a safer pharmaceutical supply chain
                     </p>

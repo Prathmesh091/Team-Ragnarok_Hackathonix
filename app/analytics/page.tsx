@@ -4,134 +4,237 @@ import { useState, useEffect } from 'react';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { MetricCard } from '@/components/ui/MetricCard';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { BarChart3, Package, Shield, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
+import {
+    BarChart3, Package, Shield, AlertTriangle, TrendingUp, Activity,
+    Clock, AlertCircle, ShieldAlert, Zap
+} from 'lucide-react';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+    BarChart, Bar, Legend, PieChart, Pie, Cell, LineChart, Line
+} from 'recharts';
+import {
+    DEMO_KPI_METRICS,
+    ANALYTICS_TRANSFER_VOLUME,
+    ANALYTICS_VERIFICATION_ACTIVITY,
+    ANALYTICS_INVENTORY_BY_CATEGORY,
+    ANALYTICS_MONTHLY_TRANSFERS,
+} from '@/utils/demo';
 
-interface AnalyticsData {
-    totalBatches: number;
-    flaggedBatches: number;
-    lowTrustBatches: number;
-    counterfeitAttempts: number;
-    eventCounts: Record<string, number>;
-    manufacturerRankings: Array<{ address: string; avgTrustScore: number; batchCount: number; }>;
-    flaggedCount: number;
-    recentEvents: Array<{ event_type: string; batch_id?: string; timestamp: string; severity: string; }>;
-}
+// 1. Product Transfer Volume data (from demo data — stable, no randomness)
+const transferVolumeData = ANALYTICS_MONTHLY_TRANSFERS.map(d => ({
+    name: d.month.split(' ')[0], // "Oct 2025" -> "Oct"
+    volume: d.completed,
+    projected: d.transfers,
+}));
 
-export default function AnalyticsPage() {
-    const [data, setData] = useState<AnalyticsData | null>(null);
+// 2. Verification Activity data (from demo data — last 7 days)
+const verificationActivityData = ANALYTICS_VERIFICATION_ACTIVITY.slice(-7).map(d => ({
+    name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }),
+    genuine: d.valid,
+    suspicious: d.suspicious,
+    counterfeit: Math.max(1, Math.floor(d.suspicious * 0.3)),
+}));
+
+// 3. Inventory Distribution data
+const inventoryData = ANALYTICS_INVENTORY_BY_CATEGORY.map((d, i) => ({
+    name: d.category,
+    value: d.units,
+    color: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444'][i],
+}));
+
+// 4. Counterfeit Alerts data (from monthly transfers — derived)
+const counterfeitAlertsData = ANALYTICS_MONTHLY_TRANSFERS.map(d => ({
+    name: d.month.split(' ')[0],
+    alerts: d.failed * 8 + Math.floor(d.failed * 1.5),
+    resolved: d.failed * 6 + Math.floor(d.failed * 0.8),
+}));
+
+// 5. Supply Chain Delays data
+const delayData = [
+    { name: 'Customs', delayDays: 45, color: '#ef4444' },
+    { name: 'Logistics', delayDays: 30, color: '#f59e0b' },
+    { name: 'Weather', delayDays: 15, color: '#3b82f6' },
+    { name: 'Mfg Bottleneck', delayDays: 25, color: '#8b5cf6' },
+];
+
+export default function AnalyticsDashboard() {
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => { fetchAnalytics(); }, []);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setLoading(false);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, []);
 
-    const fetchAnalytics = async () => {
-        try {
-            const res = await fetch('/api/analytics/counterfeit');
-            if (res.ok) {
-                const result = await res.json();
-                setData(result);
-            }
-        } catch (e) { console.error('Failed to fetch analytics:', e); }
-        finally { setLoading(false); }
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-gray-900 border border-gray-700/50 p-3 rounded-lg shadow-xl backdrop-blur-sm">
+                    <p className="text-gray-200 font-semibold mb-2">{label}</p>
+                    {payload.map((entry: any, index: number) => (
+                        <p key={index} className="text-sm flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                            <span className="text-gray-400 capitalize">{entry.name}:</span>
+                            <span className="text-gray-100 font-mono">{entry.value?.toLocaleString()}</span>
+                        </p>
+                    ))}
+                </div>
+            );
+        }
+        return null;
     };
-
-    const genuineRate = data ? Math.round(((data.totalBatches - data.flaggedBatches) / Math.max(data.totalBatches, 1)) * 100) : 0;
 
     return (
         <DashboardShell>
-            <PageHeader title="Analytics" description="Supply chain metrics and fraud detection" icon={BarChart3} />
+            <PageHeader
+                title="Supply Chain Analytics"
+                description="Comprehensive macro-level overview of global product movement, verification integrity, and potential network friction."
+                icon={BarChart3}
+            />
 
-            {/* Metric Cards */}
+            {/* Top KPI Metrics Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <MetricCard icon={Package} label="Total Batches" value={loading ? '—' : (data?.totalBatches || 0)} color="emerald" />
-                <MetricCard icon={Shield} label="Genuine Rate" value={loading ? '—' : `${genuineRate}%`} color="blue" />
-                <MetricCard icon={AlertTriangle} label="Flagged" value={loading ? '—' : (data?.flaggedBatches || 0)} color="amber" />
-                <MetricCard icon={Activity} label="Events" value={loading ? '—' : (data?.recentEvents?.length || 0)} color="purple" />
+                <MetricCard icon={Activity} label="Total Transfer Volume" value={DEMO_KPI_METRICS.totalTransfers.toLocaleString() + '+'} color="emerald" />
+                <MetricCard icon={ShieldAlert} label="Global Counterfeit Scans" value={DEMO_KPI_METRICS.counterfeitAlerts.toString()} color="red" />
+                <MetricCard icon={Package} label="Active Inventory" value={DEMO_KPI_METRICS.inventoryBatches.toLocaleString()} color="blue" />
+                <MetricCard icon={Clock} label="Avg Transit Delay" value="2.4 Days" color="amber" />
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-500 border-t-transparent"></div>
+                <div className="flex items-center justify-center py-20 min-h-[400px]">
+                    <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mb-4"></div>
+                        <p className="text-emerald-500 font-medium">Aggregating Analytics Data...</p>
+                    </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Manufacturer Rankings */}
-                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-700/50">
-                            <h2 className="text-base font-semibold text-gray-200">Manufacturer Rankings</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in zoom-in-95 duration-500">
+
+                    {/* 1. Product Transfer Volume (Area Chart) */}
+                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 shadow-lg">
+                        <div className="flex items-center gap-2 mb-6">
+                            <TrendingUp className="w-5 h-5 text-emerald-400" />
+                            <h2 className="text-base font-semibold text-gray-200">Product Transfer Volume</h2>
                         </div>
-                        {!data?.manufacturerRankings?.length ? (
-                            <div className="p-8 text-center text-gray-500 text-sm">No manufacturer data yet</div>
-                        ) : (
-                            <div className="divide-y divide-gray-700/30">
-                                {data.manufacturerRankings.map((mfr, i) => (
-                                    <div key={mfr.address} className="flex items-center justify-between px-6 py-3.5 hover:bg-gray-700/20 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                                                ${i === 0 ? 'bg-amber-500/20 text-amber-400' : 'bg-gray-700 text-gray-400'}`}>
-                                                {i + 1}
-                                            </span>
-                                            <span className="text-sm text-gray-300 font-mono truncate max-w-[180px]">{mfr.address}</span>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-xs text-gray-500">{mfr.batchCount} batches</span>
-                                            <span className={`text-sm font-semibold ${mfr.avgTrustScore >= 80 ? 'text-emerald-400' :
-                                                    mfr.avgTrustScore >= 50 ? 'text-amber-400' : 'text-red-400'
-                                                }`}>
-                                                {Math.round(mfr.avgTrustScore)}/100
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={transferVolumeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <RechartsTooltip content={<CustomTooltip />} />
+                                    <Area type="monotone" dataKey="volume" name="Actual Volume" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorVolume)" />
+                                    <Area type="monotone" dataKey="projected" name="Projected" stroke="#34d399" strokeWidth={2} strokeDasharray="5 5" fill="none" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
 
-                    {/* Recent Security Events */}
-                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-700/50">
-                            <h2 className="text-base font-semibold text-gray-200">Security Events</h2>
+                    {/* 2. Verification Activity (Stacked Bar Chart) */}
+                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 shadow-lg">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Shield className="w-5 h-5 text-blue-400" />
+                            <h2 className="text-base font-semibold text-gray-200">Verification Activity (Last 7 Days)</h2>
                         </div>
-                        {!data?.recentEvents?.length ? (
-                            <div className="p-8 text-center text-gray-500 text-sm">No security events recorded</div>
-                        ) : (
-                            <div className="divide-y divide-gray-700/30 max-h-[400px] overflow-y-auto">
-                                {data.recentEvents.map((event, i) => (
-                                    <div key={i} className="flex items-center gap-3 px-6 py-3.5 hover:bg-gray-700/20 transition-colors">
-                                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${event.severity === 'CRITICAL' ? 'bg-red-400' :
-                                                event.severity === 'WARNING' ? 'bg-amber-400' :
-                                                    event.severity === 'ERROR' ? 'bg-red-400' : 'bg-blue-400'
-                                            }`}></div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-gray-300">{event.event_type.replace(/_/g, ' ')}</p>
-                                            {event.batch_id && <p className="text-xs text-gray-500 font-mono">{event.batch_id}</p>}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <StatusBadge status={event.severity} />
-                                            <span className="text-xs text-gray-600 hidden sm:block">
-                                                {new Date(event.timestamp).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={verificationActivityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: '#374151', opacity: 0.4 }} />
+                                    <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} />
+                                    <Bar dataKey="genuine" name="Genuine" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
+                                    <Bar dataKey="suspicious" name="Suspicious" stackId="a" fill="#f59e0b" />
+                                    <Bar dataKey="counterfeit" name="Counterfeit" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
 
-                    {/* Event Type Breakdown */}
-                    {data?.eventCounts && Object.keys(data.eventCounts).length > 0 && (
-                        <div className="lg:col-span-2 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6">
-                            <h2 className="text-base font-semibold text-gray-200 mb-4">Event Breakdown</h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                {Object.entries(data.eventCounts).map(([event, count]) => (
-                                    <div key={event} className="bg-gray-900/50 rounded-lg p-4 text-center">
-                                        <p className="text-2xl font-bold text-gray-200 mb-1">{count}</p>
-                                        <p className="text-xs text-gray-500 uppercase tracking-wide">{event.replace(/_/g, ' ')}</p>
-                                    </div>
-                                ))}
+                    {/* 3. Inventory Distribution (Donut Pie Chart) */}
+                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 shadow-lg">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Package className="w-5 h-5 text-purple-400" />
+                            <h2 className="text-base font-semibold text-gray-200">Inventory Distribution</h2>
+                        </div>
+                        <div className="h-[300px] flex items-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={inventoryData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={80}
+                                        outerRadius={110}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {inventoryData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <RechartsTooltip content={<CustomTooltip />} />
+                                    <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px', color: '#9ca3af' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* 4. Counterfeit Alerts (Line Chart) */}
+                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 shadow-lg">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-red-400" />
+                                <h2 className="text-base font-semibold text-gray-200">Counterfeit Alerts Trend</h2>
                             </div>
                         </div>
-                    )}
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={counterfeitAlertsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <RechartsTooltip content={<CustomTooltip />} />
+                                    <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
+                                    <Line type="monotone" dataKey="alerts" name="Total Alerts" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="resolved" name="Resolved/Caught" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* 5. Supply Chain Delays (Horizontal Bar Chart) */}
+                    <div className="lg:col-span-2 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 shadow-lg">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Clock className="w-5 h-5 text-amber-400" />
+                            <h2 className="text-base font-semibold text-gray-200">Supply Chain Delays (Aggregate Days)</h2>
+                        </div>
+                        <div className="h-[250px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={delayData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
+                                    <XAxis type="number" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis type="category" dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: '#374151', opacity: 0.3 }} />
+                                    <Bar dataKey="delayDays" name="Cumulative Delay (Days)" radius={[0, 4, 4, 0]} barSize={30}>
+                                        {delayData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
                 </div>
             )}
         </DashboardShell>

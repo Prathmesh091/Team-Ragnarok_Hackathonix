@@ -4,13 +4,17 @@ import './globals.css'
 import './mobile-fixes.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { WalletProvider } from '@/contexts/WalletContext'
+import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+    subsets: ['latin'],
+    variable: '--font-sans',
+})
 
 export const metadata: Metadata = {
-    title: 'MediChain - Tamper-Proof Medicine Supply Chain',
-    description: 'Blockchain-based medicine supply chain verification platform preventing counterfeit medicines',
-    keywords: ['blockchain', 'medicine', 'supply chain', 'verification', 'counterfeit prevention'],
+    title: 'Veridion — Trust the Origin. Track the Journey.',
+    description: 'Blockchain-powered product supply chain verification platform. Track any product from origin to shelf.',
+    keywords: ['blockchain', 'supply chain', 'product tracking', 'verification', 'counterfeit prevention', 'veridion'],
 }
 
 export default function RootLayout({
@@ -19,7 +23,7 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="en" className="dark">
+        <html lang="en" className={cn("dark", inter.variable)}>
             <body className={inter.className}>
                 <AuthProvider>
                     <WalletProvider>

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
             return (now - scanTime) < 3600000; // 1 hour
         });
 
-        const duplicateScan = recentScans.find(scan => scan.geo_hash === geo_hash);
+        const duplicateScan = recentScans.find(scan => scan.metadata?.geo_hash === geo_hash);
 
         if (duplicateScan) {
             // Log suspicious activity

@@ -8,10 +8,10 @@ export default function HowItWorksPage() {
             <section className="container mx-auto px-4 py-20 md:py-32">
                 <div className="max-w-4xl mx-auto text-center animate-fade-in">
                     <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        How MediChain Works
+                        How Veridion Works
                     </h1>
                     <p className="text-xl md:text-2xl text-gray-600 leading-relaxed">
-                        A step-by-step journey through our blockchain-powered medicine verification system
+                        A step-by-step journey through our blockchain-powered product verification system
                     </p>
                 </div>
             </section>
@@ -39,7 +39,7 @@ export default function HowItWorksPage() {
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
-                                        <span>Records medicine name, quantity, manufacturing date, expiry date</span>
+                                        <span>Records product name, quantity, manufacturing date, expiry date</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
@@ -132,7 +132,7 @@ export default function HowItWorksPage() {
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
-                                        <span>Transfers ownership to pharmacy via smart contract</span>
+                                        <span>Transfers ownership to vendor via smart contract</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
@@ -153,11 +153,11 @@ export default function HowItWorksPage() {
                                     </div>
                                     <Building2 className="w-12 h-12" />
                                 </div>
-                                <h3 className="text-3xl font-bold mb-4">Pharmacy Receives</h3>
+                                <h3 className="text-3xl font-bold mb-4">Vendor Receives</h3>
                                 <ul className="space-y-3 text-green-100">
                                     <li className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
-                                        <span>Pharmacy receives batch from distributor</span>
+                                        <span>Vendor receives batch from distributor</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
@@ -176,7 +176,7 @@ export default function HowItWorksPage() {
                         </div>
                         <div className="order-1 md:order-2">
                             <div className="bg-white p-8 rounded-2xl shadow-lg">
-                                <h4 className="text-xl font-bold mb-4 text-gray-800">Pharmacy Benefits</h4>
+                                <h4 className="text-xl font-bold mb-4 text-gray-800">Vendor Benefits</h4>
                                 <div className="space-y-4 text-gray-700">
                                     <p className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
@@ -188,7 +188,7 @@ export default function HowItWorksPage() {
                                     </p>
                                     <p className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                                        <span>Protect against liability from fake medicines</span>
+                                        <span>Protect against liability from fake products</span>
                                     </p>
                                     <p className="flex items-start gap-2">
                                         <CheckCircle2 className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
@@ -317,7 +317,7 @@ export default function HowItWorksPage() {
                             href="/verify"
                             className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:shadow-xl transition-all hover:scale-105 font-semibold flex items-center justify-center gap-2"
                         >
-                            Verify a Medicine <ArrowRight className="w-5 h-5" />
+                            Verify a Product <ArrowRight className="w-5 h-5" />
                         </Link>
                         <Link
                             href="/manufacturer"

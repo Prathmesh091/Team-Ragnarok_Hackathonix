@@ -9,8 +9,26 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useWallet } from '@/contexts/WalletContext';
 import { useContract } from '@/hooks/useContract';
 import { Package, CheckCircle, AlertTriangle, QrCode, Clock, ShieldCheck } from 'lucide-react';
+import { DEMO_BATCHES, DEMO_PRODUCTS } from '@/utils/demo';
 
-export default function PharmacyPage() {
+// Build product lookup
+const PRODUCT_MAP: Record<string, typeof DEMO_PRODUCTS[0]> = {};
+DEMO_PRODUCTS.forEach(p => { PRODUCT_MAP[p.id] = p; });
+
+// Build demo batch rows for the table
+const demoBatchRows = DEMO_BATCHES.map(b => ({
+    id: b.batch_id,
+    batch_id: b.batch_id,
+    product_name: PRODUCT_MAP[b.product_id]?.product_name || b.product_id,
+    product_category: PRODUCT_MAP[b.product_id]?.category || '—',
+    origin_location: b.origin_location,
+    status: b.status === 'Delivered' ? 'DELIVERED' : b.status === 'In Transit' ? 'IN_TRANSIT' : b.status === 'Processing' ? 'CREATED' : b.status === 'Flagged' ? 'FLAGGED' : 'IN_TRANSIT',
+    production_date: b.production_date,
+    expiry_date: b.expiry_date,
+    quantity: Math.floor(Math.random() * 500) + 100,
+}));
+
+export default function VendorPage() {
     const { account } = useWallet();
     const { transferBatch, loading, error } = useContract();
 
@@ -26,8 +44,36 @@ export default function PharmacyPage() {
     const fetchBatches = async () => {
         try {
             const res = await fetch('/api/batches/list');
-            if (res.ok) { const data = await res.json(); setBatches(Array.isArray(data) ? data : []); }
-        } catch (e) { console.error(e); } finally { setLoadingBatches(false); }
+            if (res.ok) {
+                const data = await res.json();
+                const arr = Array.isArray(data) ? data : [];
+                if (arr.length > 0) {
+                    setBatches(arr);
+                    setLoadingBatches(false);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.log('API unavailable, using demo data');
+        }
+        // Merge with localStorage user products
+        let mergedBatches: any[] = demoBatchRows;
+        if (typeof window !== 'undefined') {
+            try {
+                const stored = JSON.parse(localStorage.getItem('user_products') || '[]');
+                const mappedStored = stored.map((b: any) => ({
+                    ...b,
+                    product_name: b.name,
+                    product_category: b.category,
+                    status: b.status || 'CREATED',
+                    quantity: 1,
+                }));
+                mergedBatches = [...mappedStored, ...demoBatchRows];
+            } catch { }
+        }
+
+        setBatches(mergedBatches);
+        setLoadingBatches(false);
     };
 
     const handleReceive = async (e: React.FormEvent) => {
@@ -44,14 +90,14 @@ export default function PharmacyPage() {
         const exp = new Date(b.expiry_date);
         const now = new Date();
         const diff = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-        return diff > 0 && diff <= 30;
+        return diff > 0 && diff <= 90;
     });
 
     return (
         <DashboardShell>
             <PageHeader
                 title="Inventory"
-                description="Manage pharmacy inventory and receive medicine batches"
+                description="Manage inventory and receive product batches"
                 icon={Package}
                 actions={
                     <div className="flex gap-2">
@@ -72,7 +118,7 @@ export default function PharmacyPage() {
                 <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-3">
                     <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
                     <p className="text-sm text-amber-300">
-                        <span className="font-semibold">{expiringSoon.length} batch(es)</span> expiring within 30 days
+                        <span className="font-semibold">{expiringSoon.length} batch(es)</span> expiring within 90 days
                     </p>
                 </div>
             )}
@@ -91,13 +137,13 @@ export default function PharmacyPage() {
                         <CheckCircle className="w-5 h-5 text-emerald-400" />
                         <h2 className="text-base font-semibold text-gray-200">Receive Batch</h2>
                     </div>
-                    <p className="text-sm text-gray-400 mb-4">As a pharmacy, you are the final destination. Confirm receipt below.</p>
+                    <p className="text-sm text-gray-400 mb-4">As a vendor, you are the final destination. Confirm receipt below.</p>
                     <form onSubmit={handleReceive} className="flex flex-col sm:flex-row gap-3">
                         <input type="text" value={batchId} onChange={e => setBatchId(e.target.value)}
-                            placeholder="Batch ID (e.g., MED-2024-001)" required
+                            placeholder="Batch ID (e.g., VRD-2024-001)" required
                             className="flex-1 px-3.5 py-2.5 bg-gray-900/60 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/40 transition-all" />
                         <input type="text" value={location} onChange={e => setLocation(e.target.value)}
-                            placeholder="Pharmacy Location"
+                            placeholder="Vendor Location"
                             className="flex-1 px-3.5 py-2.5 bg-gray-900/60 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:ring-2 focus:ring-emerald-500/40 transition-all" />
                         <button type="submit" disabled={loading}
                             className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 transition-colors disabled:opacity-50">
@@ -126,7 +172,7 @@ export default function PharmacyPage() {
                         <table className="w-full">
                             <thead>
                                 <tr className="text-xs text-gray-500 uppercase tracking-wider border-b border-gray-700/30">
-                                    <th className="text-left px-6 py-3 font-medium">Medicine</th>
+                                    <th className="text-left px-6 py-3 font-medium">Product</th>
                                     <th className="text-left px-6 py-3 font-medium hidden sm:table-cell">Quantity</th>
                                     <th className="text-left px-6 py-3 font-medium">Expiry</th>
                                     <th className="text-left px-6 py-3 font-medium">Status</th>
@@ -136,9 +182,9 @@ export default function PharmacyPage() {
                                 {batches.map((batch: any) => {
                                     const isExpired = batch.expiry_date && new Date(batch.expiry_date) < new Date();
                                     return (
-                                        <tr key={batch.id} className="hover:bg-gray-700/20 transition-colors">
+                                        <tr key={batch.id || batch.batch_id} className="hover:bg-gray-700/20 transition-colors">
                                             <td className="px-6 py-3.5">
-                                                <p className="text-sm font-medium text-gray-200">{batch.medicine_name}</p>
+                                                <p className="text-sm font-medium text-gray-200">{batch.product_name}</p>
                                                 <p className="text-xs text-gray-500 font-mono">{batch.batch_id}</p>
                                             </td>
                                             <td className="px-6 py-3.5 text-sm text-gray-400 hidden sm:table-cell">{batch.quantity}</td>

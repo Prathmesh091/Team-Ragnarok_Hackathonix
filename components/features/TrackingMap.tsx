@@ -1,6 +1,5 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -17,97 +16,98 @@ interface TrackingMapProps {
     locations: MapLocation[];
 }
 
-export function TrackingMap({ locations }: TrackingMapProps) {
-    const mapRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<L.Map | null>(null);
-
+function MapBounds({ locations }: { locations: MapLocation[] }) {
+    const map = useMap();
     useEffect(() => {
-        if (!mapRef.current || locations.length === 0) return;
-
-        // Clean up previous map
-        if (mapInstanceRef.current) {
-            mapInstanceRef.current.remove();
-            mapInstanceRef.current = null;
-        }
-
-        // Create map
-        const map = L.map(mapRef.current, {
-            scrollWheelZoom: false,
-            zoomControl: true,
-        });
-        mapInstanceRef.current = map;
-
-        // Dark tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-            maxZoom: 19,
-        }).addTo(map);
-
-        const latLngs: L.LatLngExpression[] = [];
-
-        locations.forEach((loc, index) => {
-            const latLng: L.LatLngExpression = [loc.lat, loc.lng];
-            latLngs.push(latLng);
-
-            // Custom marker icon
-            const iconColor = loc.isActive ? '#10b981' : '#6b7280';
-            const iconSize = loc.isActive ? 14 : 10;
-
-            const icon = L.divIcon({
-                className: 'custom-marker',
-                html: `<div style="
-                    width: ${iconSize}px;
-                    height: ${iconSize}px;
-                    background: ${iconColor};
-                    border: 2px solid white;
-                    border-radius: 50%;
-                    box-shadow: 0 0 ${loc.isActive ? '12px' : '6px'} ${iconColor};
-                "></div>`,
-                iconSize: [iconSize, iconSize],
-                iconAnchor: [iconSize / 2, iconSize / 2],
-            });
-
-            const marker = L.marker(latLng, { icon }).addTo(map);
-
-            marker.bindPopup(`
-                <div style="color: #111; font-size: 13px; line-height: 1.5;">
-                    <strong>${loc.role}</strong><br/>
-                    <span style="color: #555;">${loc.label}</span><br/>
-                    <span style="color: #888; font-size: 11px;">${new Date(loc.timestamp).toLocaleString()}</span>
-                </div>
-            `);
-        });
-
-        // Draw route line
-        if (latLngs.length > 1) {
-            L.polyline(latLngs, {
-                color: '#10b981',
-                weight: 2,
-                opacity: 0.7,
-                dashArray: '8, 8',
-            }).addTo(map);
-        }
-
-        // Fit bounds
-        if (latLngs.length > 0) {
-            const bounds = L.latLngBounds(latLngs);
+        if (locations.length > 0) {
+            const bounds = L.latLngBounds(locations.map(loc => [loc.lat, loc.lng]));
             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
         }
+    }, [locations, map]);
+    return null;
+}
 
-        return () => {
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
-                mapInstanceRef.current = null;
-            }
-        };
-    }, [locations]);
+export function TrackingMap({ locations }: TrackingMapProps) {
+    if (locations.length === 0) return null;
+
+    const centerContent: [number, number] = [locations[0].lat, locations[0].lng];
+
+    const getIcon = (isActive: boolean) => {
+        const iconColor = isActive ? '#10b981' : '#6366f1';
+        const iconSize = isActive ? 18 : 12;
+
+        return L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="
+                width: ${iconSize}px;
+                height: ${iconSize}px;
+                background: ${iconColor};
+                border: 2.5px solid white;
+                border-radius: 50%;
+                box-shadow: 0 0 ${isActive ? '14px' : '6px'} ${iconColor}, 0 2px 6px rgba(0,0,0,0.3);
+            "></div>`,
+            iconSize: [iconSize, iconSize],
+            iconAnchor: [iconSize / 2, iconSize / 2],
+        });
+    };
 
     return (
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-700/50">
-                <h2 className="text-base font-semibold text-gray-200">Supply Chain Map</h2>
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden relative z-0">
+            <div className="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-200">🌍 Global Shipment Map</h2>
+                <div className="flex gap-4">
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-400"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></div> Active</span>
+                    <span className="flex items-center gap-2 text-xs font-medium text-gray-400"><div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div> Previous</span>
+                </div>
             </div>
-            <div ref={mapRef} className="w-full h-[400px]" />
+            <div className="w-full h-[450px]">
+                <MapContainer center={centerContent} zoom={3} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 10 }}>
+                    {/* LIGHT THEME — CartoDB Positron */}
+                    <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    />
+
+                    {locations.length > 1 && (
+                        <Polyline
+                            positions={locations.map(loc => [loc.lat, loc.lng])}
+                            color="#6366f1"
+                            weight={3}
+                            opacity={0.7}
+                            dashArray="10, 6"
+                        />
+                    )}
+
+                    {locations.map((loc, idx) => (
+                        <Marker
+                            key={idx}
+                            position={[loc.lat, loc.lng]}
+                            icon={getIcon(loc.isActive)}
+                        >
+                            <Popup className="!rounded-xl min-w-[220px]">
+                                <div className="p-1">
+                                    <strong className="text-gray-900 block text-base font-bold capitalize">{loc.role}</strong>
+                                    <span className="text-gray-700 block my-1 font-medium text-sm">{loc.label}</span>
+                                    <span className="text-gray-500 text-xs block mt-2 border-t border-gray-200 pt-2">{new Date(loc.timestamp).toLocaleString()}</span>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    ))}
+
+                    <MapBounds locations={locations} />
+                </MapContainer>
+            </div>
+            {/* Global style for leaflet popups */}
+            <style jsx global>{`
+                .leaflet-popup-content-wrapper {
+                    border-radius: 12px;
+                    padding: 4px;
+                    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+                }
+                .leaflet-popup-content {
+                    margin: 10px 14px;
+                }
+            `}</style>
         </div>
     );
 }

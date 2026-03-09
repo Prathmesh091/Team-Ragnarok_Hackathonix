@@ -19,10 +19,10 @@ export default function FeaturesPage() {
                         🚀 Powerful Features
                     </div>
                     <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent leading-tight">
-                        Everything You Need for Secure Medicine Tracking
+                        Everything You Need for Secure Product Tracking
                     </h1>
                     <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-                        Comprehensive blockchain-powered features to ensure medicine authenticity and supply chain integrity.
+                        Comprehensive blockchain-powered features to ensure product authenticity and supply chain integrity.
                     </p>
                 </div>
             </section>
@@ -52,7 +52,7 @@ export default function FeaturesPage() {
                     <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-yellow-500/30 hover:border-yellow-500 transition-all hover:scale-105">
                         <CheckCircle2 className="w-12 h-12 text-yellow-400 mb-4" />
                         <h3 className="text-xl font-semibold mb-3 text-gray-100">Instant Verification</h3>
-                        <p className="text-gray-400">Scan QR codes to verify medicine authenticity in seconds with complete history.</p>
+                        <p className="text-gray-400">Scan QR codes to verify product authenticity in seconds with complete history.</p>
                     </div>
 
                     <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-teal-500/30 hover:border-teal-500 transition-all hover:scale-105">
@@ -79,7 +79,7 @@ export default function FeaturesPage() {
                         <ul className="space-y-3 text-gray-400">
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
-                                <span>Create medicine batches with detailed information</span>
+                                <span>Create product batches with detailed information</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
@@ -121,7 +121,7 @@ export default function FeaturesPage() {
 
                     <div className="bg-gray-800/70 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-blue-500/30">
                         <Building2 className="w-12 h-12 text-blue-400 mb-4" />
-                        <h3 className="text-2xl font-semibold mb-4 text-gray-100">Pharmacy Portal</h3>
+                        <h3 className="text-2xl font-semibold mb-4 text-gray-100">Vendor Portal</h3>
                         <ul className="space-y-3 text-gray-400">
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
@@ -133,7 +133,7 @@ export default function FeaturesPage() {
                             </li>
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                                <span>Manage pharmacy inventory</span>
+                                <span>Manage vendor inventory</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
@@ -148,7 +148,7 @@ export default function FeaturesPage() {
                         <ul className="space-y-3 text-gray-400">
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
-                                <span>Scan QR codes to verify medicine</span>
+                                <span>Scan QR codes to verify product</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
@@ -160,7 +160,7 @@ export default function FeaturesPage() {
                             </li>
                             <li className="flex items-start gap-2">
                                 <CheckCircle2 className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
-                                <span>Report counterfeit medicines instantly</span>
+                                <span>Report counterfeit products instantly</span>
                             </li>
                         </ul>
                     </div>
@@ -211,7 +211,7 @@ export default function FeaturesPage() {
                     <div className="relative z-10">
                         <h3 className="text-3xl md:text-4xl font-bold mb-4">Ready to Get Started?</h3>
                         <p className="text-xl mb-8 text-green-100">
-                            Join the fight against counterfeit medicines with blockchain technology
+                            Join the fight against counterfeit products with blockchain technology
                         </p>
                         <Link
                             href="/dashboard"

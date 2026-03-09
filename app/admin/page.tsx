@@ -50,8 +50,8 @@ export default function AdminPage() {
                                 className="w-full px-3.5 py-2.5 bg-gray-900/60 border border-gray-700 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-red-500/40 transition-all">
                                 <option value="1">Manufacturer</option>
                                 <option value="2">Distributor</option>
-                                <option value="3">Pharmacy</option>
-                                <option value="4">Hospital</option>
+                                <option value="3">Vendor</option>
+                                <option value="4">Bulk Verifier</option>
                                 <option value="5">Customer</option>
                             </select>
                         </div>
@@ -85,7 +85,7 @@ export default function AdminPage() {
                     <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6">
                         <h3 className="text-base font-semibold text-gray-200 mb-4">Quick Actions</h3>
                         <div className="space-y-2">
-                            <Link href="/hospital/bulk-verify"
+                            <Link href="/bulk-verify"
                                 className="flex items-center gap-3 px-4 py-3 bg-purple-500/10 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-500/15 transition-colors text-sm font-medium">
                                 <ScanLine className="w-4 h-4" /> Bulk Verify Batches
                             </Link>
