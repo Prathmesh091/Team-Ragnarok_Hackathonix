@@ -1,0 +1,155 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { connectWallet, getUserRole } from '@/services/blockchain';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface WalletContextType {
+    account: string | null;
+    role: number;
+    isConnecting: boolean;
+    error: string | null;
+    connect: () => Promise<void>;
+    disconnect: () => void;
+    isConnected: boolean;
+}
+
+const WalletContext = createContext<WalletContextType | undefined>(undefined);
+
+export function WalletProvider({ children }: { children: React.ReactNode }) {
+    const { user } = useAuth();
+    const [account, setAccount] = useState<string | null>(null);
+    const [role, setRole] = useState<number>(0);
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Track previous user to detect actual logout
+    const prevUserRef = useRef(user);
+
+    // Listen for MetaMask events - FORCE DISCONNECT on any change
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.ethereum) {
+            // When accounts change in MetaMask, CLEAR wallet state
+            // User must explicitly reconnect
+            const handleAccountsChanged = () => {
+                console.log('MetaMask account changed - clearing wallet');
+                setAccount(null);
+                setRole(0);
+            };
+
+            // On chain change, reload page to reset state
+            const handleChainChanged = () => {
+                window.location.reload();
+            };
+
+            window.ethereum.on('accountsChanged', handleAccountsChanged);
+            window.ethereum.on('chainChanged', handleChainChanged);
+
+            return () => {
+                window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+                window.ethereum.removeListener('chainChanged', handleChainChanged);
+            };
+        }
+    }, []);
+
+    // Fetch role when account changes
+    useEffect(() => {
+        if (account) {
+            fetchRole();
+        } else {
+            setRole(0);
+        }
+    }, [account]);
+
+    // Force disconnect wallet when user logs out
+    useEffect(() => {
+        const prevUser = prevUserRef.current;
+
+        // Detect logout: previous user existed, now it's null
+        if (prevUser && !user) {
+            console.log('User logged out - clearing wallet');
+            setAccount(null);
+            setRole(0);
+        }
+
+        // Update ref for next comparison
+        prevUserRef.current = user;
+    }, [user]);
+
+    const fetchRole = async () => {
+        if (!account) return;
+
+        try {
+            const userRole = await getUserRole(account);
+            setRole(userRole);
+        } catch (err) {
+            console.error('Failed to fetch role:', err);
+        }
+    };
+
+    const connect = useCallback(async () => {
+        setIsConnecting(true);
+        setError(null);
+
+        try {
+            console.log('Connecting wallet...');
+            // ALWAYS call eth_requestAccounts to prompt MetaMask
+            // This is the ONLY way to connect wallet
+            const address = await connectWallet();
+            console.log('Wallet connected:', address);
+
+            if (address) {
+                setAccount(address);
+            } else {
+                throw new Error('No account returned from wallet');
+            }
+        } catch (err: any) {
+            // Clear any stale state on error
+            setAccount(null);
+            setRole(0);
+
+            setError(err.message || 'Failed to connect wallet');
+            console.error('Failed to connect wallet:', err);
+        } finally {
+            setIsConnecting(false);
+        }
+    }, []);
+
+    const disconnect = useCallback(() => {
+        console.log('Disconnecting wallet');
+        setAccount(null);
+        setRole(0);
+        setError(null);
+    }, []);
+
+    const value = {
+        account,
+        role,
+        isConnecting,
+        error,
+        connect,
+        disconnect,
+        isConnected: !!account,
+    };
+
+    return (
+        <WalletContext.Provider value={value}>
+            {children}
+        </WalletContext.Provider>
+    );
+}
+
+export function useWallet() {
+    const context = useContext(WalletContext);
+    if (context === undefined) {
+        throw new Error('useWallet must be used within a WalletProvider');
+    }
+    return context;
+}
+
+// Extend Window interface for TypeScript
+declare global {
+    interface Window {
+        ethereum?: any;
+    }
+}
