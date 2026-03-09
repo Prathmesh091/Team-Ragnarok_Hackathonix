@@ -59,7 +59,7 @@ export default function SignupPage() {
                     <Link href="/" className="inline-flex items-center gap-2 mb-4">
                         <Shield className="w-10 h-10 text-blue-400" />
                         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                            MediChain
+                            Veridion
                         </h1>
                     </Link>
                     <h2 className="text-2xl font-bold text-gray-100 mb-2">

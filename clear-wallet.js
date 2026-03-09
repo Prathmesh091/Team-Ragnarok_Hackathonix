@@ -3,7 +3,7 @@
 
 if (typeof window !== 'undefined') {
     // Clear wallet auto-connect flag
-    localStorage.removeItem('medichain_wallet_auto_connect');
+    localStorage.removeItem('veridion_wallet_auto_connect');
 
     // Clear any other wallet-related data
     const keysToRemove = [];
@@ -17,7 +17,7 @@ if (typeof window !== 'undefined') {
     keysToRemove.forEach(key => localStorage.removeItem(key));
 
     console.log('✅ Cleared wallet data from localStorage');
-    console.log('Removed keys:', ['medichain_wallet_auto_connect', ...keysToRemove]);
+    console.log('Removed keys:', ['veridion_wallet_auto_connect', ...keysToRemove]);
 
     // Reload the page to reset state
     window.location.reload();

@@ -2,9 +2,9 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title MedicineSupplyChain
- * @dev Tamper-proof medicine supply chain verification system
- * @notice This contract tracks medicine batches from manufacturer to customer
+ * @title ProductSupplyChain
+ * @dev Tamper-proof product supply chain verification system
+ * @notice This contract tracks product batches from manufacturer to customer
  * 
  * KEY FEATURES:
  * - Role-based access control (RBAC)
@@ -14,7 +14,7 @@ pragma solidity ^0.8.20;
  * - Duplicate scan detection
  * - Event emissions for frontend tracking
  */
-contract MedicineSupplyChain {
+contract ProductSupplyChain {
     
     // ============ ENUMS ============
     
@@ -31,8 +31,8 @@ contract MedicineSupplyChain {
         NONE,
         MANUFACTURER,
         DISTRIBUTOR,
-        PHARMACY,
-        HOSPITAL,
+        VENDOR,
+        BULK_VERIFIER,
         CUSTOMER
     }
     
@@ -42,7 +42,7 @@ contract MedicineSupplyChain {
     enum BatchStatus {
         CREATED,        // Just created by manufacturer
         IN_TRANSIT,     // Being transferred
-        DELIVERED,      // Reached pharmacy
+        DELIVERED,      // Reached vendor
         FLAGGED         // Suspicious activity detected
     }
     
@@ -52,13 +52,13 @@ contract MedicineSupplyChain {
      * @dev Main batch data structure
      */
     struct Batch {
-        string batchId;              // Unique identifier (e.g., "MED-2024-001")
+        string batchId;              // Unique identifier (e.g., "VRD-2024-001")
         address manufacturer;        // Creator's wallet address
         address currentOwner;        // Current holder's wallet address
         BatchStatus status;          // Current status
         uint256 createdAt;           // Creation timestamp
-        uint256 expiryDate;          // Medicine expiry timestamp
-        bytes32 metadataHash;        // IPFS hash of medicine details
+        uint256 expiryDate;          // Product expiry timestamp
+        bytes32 metadataHash;        // IPFS hash of product details
         address[] supplyChain;       // Array of all owners (history)
         bool exists;                 // Check if batch exists
     }
@@ -194,10 +194,10 @@ contract MedicineSupplyChain {
     // ============ MANUFACTURER FUNCTIONS ============
     
     /**
-     * @dev Create a new medicine batch
+     * @dev Create a new product batch
      * @param _batchId Unique batch identifier
      * @param _expiryDate Expiry timestamp
-     * @param _metadataHash IPFS hash of medicine details
+     * @param _metadataHash IPFS hash of product details
      */
     function createBatch(
         string memory _batchId,
@@ -246,8 +246,8 @@ contract MedicineSupplyChain {
         require(roles[_to] != Role.NONE, "Recipient has no role assigned");
         require(
             roles[_to] == Role.DISTRIBUTOR || 
-            roles[_to] == Role.PHARMACY,
-            "Recipient must be distributor or pharmacy"
+            roles[_to] == Role.VENDOR,
+            "Recipient must be distributor or vendor"
         );
         
         Batch storage batch = batches[_batchId];
@@ -264,8 +264,8 @@ contract MedicineSupplyChain {
         batch.status = BatchStatus.IN_TRANSIT;
         batch.supplyChain.push(_to);
         
-        // If transferred to pharmacy, mark as delivered
-        if (roles[_to] == Role.PHARMACY) {
+        // If transferred to vendor, mark as delivered
+        if (roles[_to] == Role.VENDOR) {
             batch.status = BatchStatus.DELIVERED;
         }
         
@@ -324,12 +324,12 @@ contract MedicineSupplyChain {
         }
         
         // Check for proper supply chain order
-        // Expected: Manufacturer -> (Distributor) -> Pharmacy
+        // Expected: Manufacturer -> (Distributor) -> Vendor
         if (batch.supplyChain.length > 1) {
             // If there's more than manufacturer, check roles
             for (uint256 i = 1; i < batch.supplyChain.length; i++) {
                 Role currentRole = roles[batch.supplyChain[i]];
-                if (currentRole != Role.DISTRIBUTOR && currentRole != Role.PHARMACY) {
+                if (currentRole != Role.DISTRIBUTOR && currentRole != Role.VENDOR) {
                     return (false, "Invalid role in supply chain");
                 }
             }

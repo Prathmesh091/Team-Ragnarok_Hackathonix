@@ -83,13 +83,13 @@ export function Navbar() {
                             <div className="absolute inset-0 bg-green-500/20 blur-xl group-hover:bg-green-500/30 transition-all rounded-full"></div>
                             <img
                                 src="/logo.png"
-                                alt="MediChain Logo"
+                                alt="Veridion Logo"
                                 className="w-12 h-12 relative z-10 transition-transform group-hover:scale-110 group-hover:rotate-6 duration-300"
                             />
                         </div>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                                MediChain
+                                Veridion
                             </h1>
                             {userRole && (
                                 <p className="text-xs text-gray-400 font-medium">
@@ -109,8 +109,8 @@ export function Navbar() {
                                     key={item.href}
                                     href={item.href}
                                     className={`group relative px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${active
-                                            ? 'text-green-400 bg-green-500/10'
-                                            : 'text-gray-300 hover:text-green-400 hover:bg-gray-800/50'
+                                        ? 'text-green-400 bg-green-500/10'
+                                        : 'text-gray-300 hover:text-green-400 hover:bg-gray-800/50'
                                         }`}
                                 >
                                     <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${active ? 'text-green-400' : ''}`} />
@@ -140,7 +140,7 @@ export function Navbar() {
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-semibold text-gray-200">
-                                                {user?.user_metadata?.full_name || 'User'}
+                                                {user?.full_name || 'User'}
                                             </span>
                                             <span className="text-xs text-gray-400">
                                                 {user?.email}
@@ -208,8 +208,8 @@ export function Navbar() {
                                         href={item.href}
                                         onClick={() => setMobileMenuOpen(false)}
                                         className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${active
-                                                ? 'text-green-400 bg-green-500/10 border border-green-500/30'
-                                                : 'text-gray-300 hover:text-green-400 hover:bg-gray-800/50'
+                                            ? 'text-green-400 bg-green-500/10 border border-green-500/30'
+                                            : 'text-gray-300 hover:text-green-400 hover:bg-gray-800/50'
                                             }`}
                                     >
                                         <Icon className="w-5 h-5" />
@@ -228,7 +228,7 @@ export function Navbar() {
                                             </div>
                                             <div className="flex flex-col flex-1">
                                                 <span className="text-sm font-semibold text-gray-200">
-                                                    {user?.user_metadata?.full_name || 'User'}
+                                                    {user?.full_name || 'User'}
                                                 </span>
                                                 <span className="text-xs text-gray-400">
                                                     {user?.email}

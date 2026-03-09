@@ -10,27 +10,181 @@ import { TrustScoreBadge } from '@/components/TrustScoreBadge';
 import { MissingLinkDetector } from '@/components/MissingLinkDetector';
 import {
     MapPin, Search, Package, Truck, Building2, Shield, CheckCircle,
-    AlertTriangle, Clock, ExternalLink, Hash, User, ArrowRight
+    AlertTriangle, Clock, Factory, ArrowRight, Globe, Box
 } from 'lucide-react';
+import { DEMO_PRODUCTS, DEMO_BATCHES, DEMO_TRANSFERS, DEMO_KPI_METRICS } from '@/utils/demo';
 
-// Dynamically import Leaflet map (no SSR)
 const TrackingMap = lazy(() =>
     import('@/components/features/TrackingMap').then(mod => ({ default: mod.TrackingMap }))
 );
 
-// Supply chain location coordinates (Indian cities for demo)
+// Geo coordinates
 const LOCATION_COORDS: Record<string, { lat: number; lng: number }> = {
-    'Mumbai': { lat: 19.076, lng: 72.8777 },
-    'Delhi': { lat: 28.7041, lng: 77.1025 },
-    'Bangalore': { lat: 12.9716, lng: 77.5946 },
-    'Chennai': { lat: 13.0827, lng: 80.2707 },
-    'Kolkata': { lat: 22.5726, lng: 88.3639 },
-    'Hyderabad': { lat: 17.385, lng: 78.4867 },
-    'Pune': { lat: 18.5204, lng: 73.8567 },
-    'Ahmedabad': { lat: 23.0225, lng: 72.5714 },
-    'Jaipur': { lat: 26.9124, lng: 75.7873 },
-    'Lucknow': { lat: 26.8467, lng: 80.9462 },
+    'Mumbai': { lat: 19.076, lng: 72.8777 }, 'Shenzhen': { lat: 22.5431, lng: 114.0579 },
+    'Dubai': { lat: 25.2048, lng: 55.2708 }, 'New York': { lat: 40.7128, lng: -74.0060 },
+    'London': { lat: 51.5074, lng: -0.1278 }, 'Singapore': { lat: 1.3521, lng: 103.8198 },
+    'Delhi': { lat: 28.7041, lng: 77.1025 }, 'New Delhi': { lat: 28.7041, lng: 77.1025 },
+    'Bangalore': { lat: 12.9716, lng: 77.5946 }, 'Chennai': { lat: 13.0827, lng: 80.2707 },
+    'Rotterdam': { lat: 51.9244, lng: 4.4777 }, 'Paris': { lat: 48.8566, lng: 2.3522 },
+    'Frankfurt': { lat: 50.1109, lng: 8.6821 }, 'Dongguan': { lat: 23.0208, lng: 113.7518 },
+    'Hyderabad': { lat: 17.3850, lng: 78.4867 }, 'Darjeeling': { lat: 27.0410, lng: 88.2663 },
+    'Geneva': { lat: 46.2044, lng: 6.1432 }, 'Florence': { lat: 43.7696, lng: 11.2558 },
+    'Stuttgart': { lat: 48.7758, lng: 9.1829 }, 'Detroit': { lat: 42.3314, lng: -83.0458 },
+    'Chicago': { lat: 41.8781, lng: -87.6298 }, 'Basel': { lat: 47.5596, lng: 7.5886 },
+    'Crete': { lat: 35.2401, lng: 24.8093 }, 'Taipei': { lat: 25.0330, lng: 121.5654 },
+    'Brussels': { lat: 50.8503, lng: 4.3517 }, 'Lucknow': { lat: 26.8467, lng: 80.9462 },
 };
+
+function findCoords(locationStr: string) {
+    const cityKey = Object.keys(LOCATION_COORDS).find(city =>
+        locationStr.toLowerCase().includes(city.toLowerCase())
+    );
+    return cityKey ? LOCATION_COORDS[cityKey] : { lat: 20.5937, lng: 78.9629 }; // Default: India center
+}
+
+// Build product map entries for the default view
+const PRODUCT_MAP: Record<string, typeof DEMO_PRODUCTS[0]> = {};
+DEMO_PRODUCTS.forEach(p => { PRODUCT_MAP[p.id] = p; });
+
+// Build a product-level tracking table (one row per product, showing latest location)
+function buildProductTrackingRows() {
+    const demoRows = DEMO_PRODUCTS.map(product => {
+        // Get all batches for this product
+        const batches = DEMO_BATCHES.filter(b => b.product_id === product.id && b.status !== 'Flagged');
+        const latestBatch = batches[batches.length - 1] || batches[0];
+        if (!latestBatch) return null;
+
+        // Get latest transfer for this product
+        const transfers = DEMO_TRANSFERS.filter(t => batches.some(b => b.batch_id === t.batch_id));
+        const latestTransfer = transfers[transfers.length - 1];
+
+        const currentLocation = latestTransfer
+            ? latestTransfer.location.split('→').pop()?.trim() || latestTransfer.location
+            : latestBatch.origin_location;
+
+        return {
+            id: product.id,
+            product_name: product.product_name,
+            category: product.category,
+            manufacturer: product.manufacturer,
+            batch_count: batches.length,
+            latest_batch: latestBatch.batch_id,
+            current_location: currentLocation,
+            origin: latestBatch.origin_location,
+            current_stage: latestBatch.current_stage,
+            status: latestBatch.status === 'Delivered' ? 'DELIVERED' : latestBatch.status === 'In Transit' ? 'IN_TRANSIT' : 'CREATED',
+            last_updated: latestTransfer?.timestamp || latestBatch.production_date + 'T00:00:00Z',
+        };
+    }).filter(Boolean);
+
+    // Merge user products from localStorage
+    let userRows: any[] = [];
+    if (typeof window !== 'undefined') {
+        try {
+            const stored = JSON.parse(localStorage.getItem('user_products') || '[]');
+            userRows = stored.map((p: any) => ({
+                id: p.id,
+                product_name: p.name,
+                category: p.category,
+                manufacturer: p.manufacturer,
+                batch_count: 1,
+                latest_batch: p.batch_id,
+                current_location: p.origin || 'Manufacturing',
+                origin: p.origin || 'Manufacturing',
+                current_stage: 'Manufacturer',
+                status: 'CREATED',
+                last_updated: p.created_at
+            }));
+        } catch { }
+    }
+
+    return [...userRows, ...demoRows];
+}
+
+// Build map locations: for the overview, show only the current location of each product
+function buildProductMapLocations() {
+    const locations: Array<{ lat: number; lng: number; label: string; role: string; timestamp: string; isActive: boolean }> = [];
+
+    DEMO_PRODUCTS.forEach(product => {
+        const batches = DEMO_BATCHES.filter(b => b.product_id === product.id && b.status !== 'Flagged');
+        if (batches.length === 0) return;
+
+        const latestBatch = batches[batches.length - 1];
+        const transfers = DEMO_TRANSFERS.filter(t => batches.some(b => b.batch_id === t.batch_id));
+        const lastTransfer = transfers[transfers.length - 1];
+
+        // Only add CURRENT location for the overview
+        if (lastTransfer) {
+            const destStr = lastTransfer.location.split('→').pop()?.trim() || lastTransfer.location;
+            const destCoords = findCoords(destStr);
+            locations.push({
+                ...destCoords,
+                label: `${product.product_name} — ${destStr}`,
+                role: lastTransfer.status === 'In Transit' ? 'In Transit' : 'Current Location',
+                timestamp: lastTransfer.timestamp,
+                isActive: lastTransfer.status === 'In Transit',
+            });
+        } else {
+            const originCoords = findCoords(latestBatch.origin_location);
+            locations.push({
+                ...originCoords,
+                label: `${product.product_name} — Origin: ${latestBatch.origin_location}`,
+                role: 'Manufacturer (Origin)',
+                timestamp: latestBatch.production_date + 'T00:00:00Z',
+                isActive: true,
+            });
+        }
+    });
+
+    // Also add user-created products from localStorage
+    if (typeof window !== 'undefined') {
+        try {
+            const stored = JSON.parse(localStorage.getItem('user_products') || '[]');
+            stored.forEach((p: any) => {
+                const coords = findCoords(p.origin || 'Mumbai');
+                locations.push({
+                    ...coords,
+                    label: `${p.name} — ${p.origin || 'Manufacturing'}`,
+                    role: 'Product Registered',
+                    timestamp: p.created_at || new Date().toISOString(),
+                    isActive: true,
+                });
+            });
+        } catch { }
+    }
+
+    return locations;
+}
+
+// Build map locations for a SINGLE selected product's journey
+function buildSingleProductJourney(data: BatchData) {
+    const locations: Array<{ lat: number; lng: number; label: string; role: string; timestamp: string; isActive: boolean }> = [];
+
+    // 1. Origin
+    const originCoords = findCoords(data.batch.origin_location || 'Mumbai');
+    locations.push({
+        ...originCoords,
+        label: `Origin: ${data.batch.origin_location || 'Manufacturing'}`,
+        role: 'Manufacturer',
+        timestamp: data.batch.created_at || data.batch.production_date,
+        isActive: data.transfers.length === 0,
+    });
+
+    // 2. Transfers
+    data.transfers.forEach((t, i) => {
+        const destStr = t.location.split('→').pop()?.trim() || t.location;
+        const coords = findCoords(destStr);
+        locations.push({
+            ...coords,
+            label: `To: ${destStr}`,
+            role: t.to_role || 'Logistics',
+            timestamp: t.timestamp,
+            isActive: i === data.transfers.length - 1,
+        });
+    });
+
+    return locations;
+}
 
 interface BatchData {
     batch: any;
@@ -45,62 +199,124 @@ interface BatchData {
         supplyChainComplete: boolean;
         scanCount: number;
         duplicateScans: number;
+        anomalies: number;
     };
 }
 
 const SUPPLY_CHAIN_STAGES = [
-    { key: 'manufacturer', label: 'Manufactured', icon: Package, color: 'emerald' },
-    { key: 'distributor', label: 'Shipped to Distributor', icon: Truck, color: 'amber' },
-    { key: 'pharmacy', label: 'Received by Retailer', icon: Building2, color: 'blue' },
-    { key: 'delivered', label: 'Available for Sale', icon: CheckCircle, color: 'emerald' },
+    { key: 'manufacturer', label: 'Manufactured', icon: Factory, color: 'emerald' },
+    { key: 'logistics', label: 'In Transit', icon: Truck, color: 'amber' },
+    { key: 'warehouse', label: 'Warehouse Hub', icon: Building2, color: 'blue' },
+    { key: 'vendor', label: 'Vendor / Retail', icon: Package, color: 'purple' },
+    { key: 'delivered', label: 'Delivered / Final', icon: CheckCircle, color: 'emerald' },
 ];
 
 export default function TrackingPage() {
-    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [data, setData] = useState<BatchData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [productRows, setProductRows] = useState<any[]>([]);
+    const [mapLocations, setMapLocations] = useState<any[]>([]);
+
+    useEffect(() => {
+        setProductRows(buildProductTrackingRows());
+        setMapLocations(buildProductMapLocations());
+    }, []);
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
         setLoading(true); setError(''); setData(null);
+
+        // Check localStorage first for immediate feedback on newly created products
+        if (typeof window !== 'undefined') {
+            try {
+                const stored = JSON.parse(localStorage.getItem('user_products') || '[]');
+                const found = stored.find((p: any) =>
+                    p.batch_id.toLowerCase() === searchQuery.trim().toLowerCase() ||
+                    p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+                );
+
+                if (found) {
+                    setData({
+                        batch: {
+                            batch_id: found.batch_id,
+                            product_name: found.name,
+                            product_category: found.category,
+                            sku: found.sku,
+                            manufacturer_name: found.manufacturer,
+                            origin_location: found.origin,
+                            production_date: found.production_date,
+                            status: 'CREATED',
+                            created_at: found.created_at,
+                        },
+                        transfers: [],
+                        scans: [],
+                        verification: {
+                            status: 'genuine',
+                            trustScore: 40, // Baseline for new product
+                            warnings: ['Newly registered — Supply chain in progress'],
+                            isExpired: false,
+                            missingLink: null,
+                            supplyChainComplete: false,
+                            scanCount: 0,
+                            duplicateScans: 0,
+                            anomalies: 0,
+                        },
+                    });
+                    setLoading(false);
+                    return;
+                }
+            } catch { }
+        }
+
         try {
-            const res = await fetch(`/api/verify/${searchQuery.trim()}`, { method: 'POST' });
+            const res = await fetch(`/api/verify/${encodeURIComponent(searchQuery.trim())}`, { method: 'POST' });
             const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Batch not found');
+            if (!res.ok) throw new Error(result.error || 'Product not found');
             setData(result);
         } catch (err: any) {
-            setError(err.message || 'Failed to track batch');
+            setError(err.message || 'Failed to track product');
         } finally { setLoading(false); }
     };
 
-    // Build map locations from transfers
-    const getMapLocations = () => {
+    // Quick search from table row
+    const handleProductClick = (batchId: string) => {
+        setSearchQuery(batchId);
+        // Trigger search
+        setLoading(true); setError(''); setData(null);
+        fetch(`/api/verify/${encodeURIComponent(batchId)}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(result => {
+                if (result.error) throw new Error(result.error);
+                setData(result);
+            })
+            .catch(err => setError(err.message))
+            .finally(() => setLoading(false));
+    };
+
+    const getSearchMapLocations = () => {
         if (!data) return [];
         const locations: Array<{ lat: number; lng: number; label: string; role: string; timestamp: string; isActive: boolean }> = [];
 
-        // Add manufacturer as origin
-        const mfgCity = Object.keys(LOCATION_COORDS)[0]; // Default Mumbai
+        const originCoords = findCoords(data.batch.origin_location || 'Shenzhen');
         locations.push({
-            ...LOCATION_COORDS[mfgCity],
-            label: mfgCity,
+            ...originCoords,
+            label: `${data.batch.product_name} — ${data.batch.origin_location || 'Origin'}`,
             role: 'Manufacturer',
-            timestamp: data.batch.manufacturing_date || data.batch.created_at,
+            timestamp: data.batch.production_date || data.batch.created_at,
             isActive: data.transfers.length === 0,
         });
 
-        // Add each transfer
         data.transfers.forEach((transfer, i) => {
             const loc = transfer.location || '';
-            const cityMatch = Object.keys(LOCATION_COORDS).find(city =>
-                loc.toLowerCase().includes(city.toLowerCase())
-            );
-            const coords = cityMatch ? LOCATION_COORDS[cityMatch] : LOCATION_COORDS[Object.keys(LOCATION_COORDS)[(i + 1) % Object.keys(LOCATION_COORDS).length]];
+            const destStr = loc.split('→').pop()?.trim() || loc;
+            const coords = findCoords(destStr);
+
             locations.push({
                 ...coords,
-                label: loc || `Transfer ${i + 1}`,
+                label: `${data.batch.product_name} — ${destStr}`,
                 role: transfer.to_role || 'Transfer',
                 timestamp: transfer.timestamp,
                 isActive: i === data.transfers.length - 1,
@@ -110,93 +326,183 @@ export default function TrackingPage() {
         return locations;
     };
 
-    // Get current stage index
     const getCurrentStage = () => {
         if (!data) return -1;
-        if (data.batch.status === 'DELIVERED') return 3;
-        if (data.transfers.some((t: any) => t.to_role?.toLowerCase().includes('pharmacy'))) return 2;
-        if (data.transfers.some((t: any) => t.to_role?.toLowerCase().includes('distributor'))) return 1;
+        if (data.batch.status === 'DELIVERED') return 4;
+        const roles = data.transfers.map((t: any) => (t.to_role || '').toLowerCase());
+        if (roles.some(r => r.includes('vendor') || r.includes('retail') || r.includes('pharmacy') || r.includes('boutique'))) return 3;
+        if (roles.some(r => r.includes('warehouse') || r.includes('storage') || r.includes('depot'))) return 2;
+        if (roles.some(r => r.includes('distributor') || r.includes('logistic') || r.includes('freight') || r.includes('swift') || r.includes('rapid'))) return 1;
         return 0;
     };
 
     const getCurrentLocation = () => {
         if (!data) return 'Unknown';
-        if (data.transfers.length === 0) return 'Manufacturer';
+        if (data.transfers.length === 0) return data.batch.origin_location || 'Manufacturer';
         const lastTransfer = data.transfers[data.transfers.length - 1];
-        return lastTransfer.location || lastTransfer.to_role || 'In Transit';
+        const loc = lastTransfer.location || '';
+        return loc.split('→').pop()?.trim() || lastTransfer.to_role || 'In Transit';
     };
+
+    const activeMapLocations = data ? getSearchMapLocations() : mapLocations;
 
     return (
         <DashboardShell>
-            <PageHeader title="Live Supply Chain Tracking" description="Track medicine batch movement through the supply chain in real time" icon={MapPin} />
+            <PageHeader
+                title="Product Tracking"
+                description="Track products globally — search by product name, batch ID, or shipment ID"
+                icon={Globe}
+            />
 
-            {/* Search Bar */}
-            <div className="mb-8">
+            {/* Product Search Bar */}
+            <div className="mb-6">
                 <form onSubmit={handleSearch} className="relative max-w-3xl">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Search by Batch ID, QR code value, or Transaction Hash..."
-                        className="w-full pl-12 pr-28 py-4 bg-gray-800/60 border border-gray-700 rounded-xl text-gray-200 text-sm placeholder-gray-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-all"
+                        placeholder="Search by Product Name, Batch ID (BAT-xxx), or Shipment ID (SHP-xxx)..."
+                        className="w-full pl-12 pr-32 py-4 bg-gray-800/80 backdrop-blur-sm border border-gray-700 rounded-xl text-gray-200 text-sm placeholder-gray-500 shadow-xl shadow-black/20 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
                     />
                     <button type="submit" disabled={loading}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 transition-colors disabled:opacity-50">
-                        {loading ? 'Tracking...' : 'Track'}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all disabled:opacity-50">
+                        {loading ? 'Searching...' : 'Track Product'}
                     </button>
                 </form>
             </div>
 
-            {/* Loading */}
+            {/* KPI Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <MetricCard icon={Box} label="Products Tracked" value={DEMO_PRODUCTS.length} color="emerald" />
+                <MetricCard icon={Truck} label="Active Shipments" value={DEMO_KPI_METRICS.activeShipments} color="blue" />
+                <MetricCard icon={CheckCircle} label="Delivered" value={DEMO_BATCHES.filter(b => b.status === 'Delivered').length} color="emerald" />
+                <MetricCard icon={Shield} label="Avg Trust Score" value={`${DEMO_KPI_METRICS.avgTrustScore}/100`} color="emerald" />
+            </div>
+
             {loading && (
                 <div className="flex items-center justify-center py-20">
                     <div className="text-center">
-                        <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-500 border-t-transparent mx-auto mb-3"></div>
-                        <p className="text-sm text-gray-500">Tracking batch through supply chain...</p>
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
+                        <p className="text-sm font-medium text-emerald-500">Tracking product through supply chain...</p>
                     </div>
                 </div>
             )}
 
-            {/* Error */}
             {error && !loading && (
-                <div className="max-w-2xl mx-auto p-8 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
-                    <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                    <h2 className="text-lg font-bold text-red-300 mb-2">Batch Not Found</h2>
-                    <p className="text-red-400/80 text-sm">{error}</p>
+                <div className="max-w-2xl mx-auto p-6 bg-red-500/10 border border-red-500/30 rounded-xl shadow-lg mb-6">
+                    <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+                    <h2 className="text-lg font-bold text-red-300 mb-2 text-center">Tracking Error</h2>
+                    <p className="text-red-400/80 text-sm whitespace-pre-line text-center">{error}</p>
                 </div>
             )}
 
-            {/* Results */}
+            {/* Map — always visible */}
+            {!loading && activeMapLocations.length > 0 && (
+                <div className="mb-6">
+                    <Suspense fallback={
+                        <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 h-[450px] flex items-center justify-center">
+                            <p className="text-gray-500 text-sm animate-pulse">Initializing product tracking map...</p>
+                        </div>
+                    }>
+                        <div className="shadow-lg rounded-xl overflow-hidden pointer-events-auto h-[450px]">
+                            <TrackingMap locations={activeMapLocations} />
+                        </div>
+                    </Suspense>
+                </div>
+            )}
+
+            {/* Default: Product Tracking Table */}
+            {!data && !loading && (
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden shadow-lg animate-in fade-in duration-700">
+                    <div className="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-200 flex items-center gap-2">
+                            <Package className="w-5 h-5 text-emerald-400" />
+                            All Tracked Products
+                        </h3>
+                        <p className="text-xs text-gray-500">Click a row to track</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-800/30 text-xs text-gray-400 uppercase tracking-wider border-b border-gray-700/30">
+                                    <th className="px-6 py-3 font-medium">Product Name</th>
+                                    <th className="px-6 py-3 font-medium hidden sm:table-cell">Category</th>
+                                    <th className="px-6 py-3 font-medium hidden md:table-cell">Manufacturer</th>
+                                    <th className="px-6 py-3 font-medium">Current Location</th>
+                                    <th className="px-6 py-3 font-medium hidden lg:table-cell">Stage</th>
+                                    <th className="px-6 py-3 font-medium">Status</th>
+                                    <th className="px-6 py-3 font-medium text-right">Track</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700/30">
+                                {productRows.map((row: any) => (
+                                    <tr key={row.id} className="hover:bg-gray-700/20 transition-colors cursor-pointer" onClick={() => handleProductClick(row.latest_batch)}>
+                                        <td className="px-6 py-4">
+                                            <p className="text-sm font-medium text-gray-200">{row.product_name}</p>
+                                            <p className="text-xs text-gray-500 font-mono">{row.latest_batch}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-300 hidden sm:table-cell">{row.category}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-400 hidden md:table-cell">{row.manufacturer}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-300 flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                            {row.current_location}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-400 hidden lg:table-cell">{row.current_stage}</td>
+                                        <td className="px-6 py-4">
+                                            <StatusBadge status={row.status} />
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button className="p-2 bg-gray-700/30 hover:bg-gray-700 rounded-md transition-colors">
+                                                <ArrowRight className="w-4 h-4 text-emerald-400" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Searched Product Detail View */}
             {data && !loading && (
-                <div className="space-y-6">
-                    {/* Status Card + Trust Score */}
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                        <MetricCard icon={MapPin} label="Current Location"
-                            value={getCurrentLocation()} color="emerald" />
-                        <MetricCard icon={Package} label="Status"
-                            value={data.batch.status?.replace(/_/g, ' ') || 'CREATED'} color="blue" />
-                        <MetricCard icon={Clock} label="Last Updated"
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {/* Back button */}
+                    <button onClick={() => { setData(null); setSearchQuery(''); setError(''); }}
+                        className="text-sm text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1.5">
+                        ← Back to all products
+                    </button>
+
+                    <div className="grid grid-cols-1 gap-6">
+                        <TrackingMap locations={buildSingleProductJourney(data)} />
+                    </div>
+
+                    {/* Current Location & Key Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <MetricCard icon={MapPin} label="Current Location" value={getCurrentLocation()} color="emerald" />
+                        <MetricCard icon={Package} label="Product Status" value={data.batch.status?.replace(/_/g, ' ') || 'CREATED'} color="blue" />
+                        <MetricCard icon={Clock} label="Last Check-in"
                             value={data.transfers.length > 0
                                 ? new Date(data.transfers[data.transfers.length - 1].timestamp).toLocaleDateString()
-                                : 'No transfers'
+                                : 'Awaiting first transfer'
                             } color="amber" />
-                        <MetricCard icon={Shield} label="Trust Score"
-                            value={`${data.verification.trustScore}/100`}
+                        <MetricCard icon={Shield} label="Trust Score" value={`${data.verification.trustScore}/100`}
                             color={data.verification.trustScore >= 80 ? 'emerald' : data.verification.trustScore >= 50 ? 'amber' : 'red'} />
                     </div>
 
-                    {/* Counterfeit Warning */}
                     {(data.verification.missingLink || data.verification.warnings.length > 0) && (
                         <MissingLinkDetector missingLink={data.verification.missingLink} warnings={data.verification.warnings} />
                     )}
 
                     {/* Supply Chain Timeline */}
-                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6">
-                        <h2 className="text-base font-semibold text-gray-200 mb-6">Supply Chain Timeline</h2>
+                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8 shadow-lg">
+                        <h2 className="text-lg font-semibold text-gray-200 mb-8 flex items-center gap-2">
+                            <Truck className="w-5 h-5 text-blue-400" />
+                            Product Journey — {data.batch.product_name}
+                        </h2>
 
-                        {/* Horizontal timeline */}
-                        <div className="relative">
+                        <div className="relative max-w-5xl mx-auto">
                             <div className="flex items-center justify-between mb-8">
                                 {SUPPLY_CHAIN_STAGES.map((stage, i) => {
                                     const currentStage = getCurrentStage();
@@ -206,183 +512,105 @@ export default function TrackingPage() {
 
                                     return (
                                         <div key={stage.key} className="flex flex-col items-center relative flex-1">
-                                            {/* Connector line */}
                                             {i > 0 && (
-                                                <div className={`absolute top-5 -left-1/2 right-1/2 h-0.5 ${isCompleted ? 'bg-emerald-500' : 'bg-gray-700'
-                                                    }`}></div>
+                                                <div className={`absolute top-5 -left-1/2 right-1/2 h-[3px] transition-all duration-500 ${isCompleted ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-gray-700'}`}></div>
                                             )}
-                                            {/* Node */}
-                                            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${isCurrent
-                                                    ? 'bg-emerald-500/20 border-emerald-500 shadow-lg shadow-emerald-500/30'
-                                                    : isCompleted
-                                                        ? 'bg-emerald-500/15 border-emerald-500/50'
-                                                        : 'bg-gray-800 border-gray-600'
+                                            <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCurrent
+                                                ? 'bg-emerald-900/60 border-emerald-400 shadow-[0_0_15px_#34d399]'
+                                                : isCompleted ? 'bg-emerald-900/40 border-emerald-600/50' : 'bg-gray-800 border-gray-600'
                                                 }`}>
-                                                <Icon className={`w-4 h-4 ${isCompleted ? 'text-emerald-400' : 'text-gray-500'}`} />
+                                                <Icon className={`w-5 h-5 ${isCompleted && !isCurrent ? 'text-emerald-500' : isCurrent ? 'text-emerald-300' : 'text-gray-500'}`} />
                                                 {isCurrent && (
-                                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
+                                                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                                                    </span>
                                                 )}
                                             </div>
-                                            <span className={`mt-2 text-xs font-medium text-center ${isCompleted ? 'text-gray-200' : 'text-gray-500'
-                                                }`}>{stage.label}</span>
+                                            <span className={`mt-3 text-xs font-semibold text-center uppercase tracking-wider ${isCurrent ? 'text-emerald-400' : isCompleted ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                {stage.label}
+                                            </span>
                                         </div>
                                     );
                                 })}
                             </div>
                         </div>
+                    </div>
 
-                        {/* Transfer details */}
-                        {data.transfers.length > 0 && (
-                            <div className="border-t border-gray-700/50 pt-4 space-y-3">
-                                {data.transfers.map((transfer, i) => (
-                                    <div key={transfer.id || i} className="flex items-center gap-4 p-3 bg-gray-900/40 rounded-lg hover:bg-gray-900/60 transition-colors">
-                                        <div className="w-8 h-8 bg-emerald-500/15 rounded-full flex items-center justify-center">
-                                            {transfer.to_role?.toLowerCase().includes('distributor')
-                                                ? <Truck className="w-4 h-4 text-emerald-400" />
-                                                : transfer.to_role?.toLowerCase().includes('pharmacy')
-                                                    ? <Building2 className="w-4 h-4 text-blue-400" />
-                                                    : <Package className="w-4 h-4 text-amber-400" />
-                                            }
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-200 capitalize">{transfer.to_role || 'Transfer'}</p>
-                                            <p className="text-xs text-gray-500 font-mono truncate">{transfer.to_address}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            {transfer.location && (
-                                                <p className="text-xs text-gray-400 flex items-center gap-1">
-                                                    <MapPin className="w-3 h-3" /> {transfer.location}
-                                                </p>
-                                            )}
-                                            <p className="text-xs text-gray-500">{new Date(transfer.timestamp).toLocaleString()}</p>
-                                        </div>
+                    {/* Product Detail + Trust Score */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 shadow-lg">
+                            <h3 className="text-base font-semibold text-gray-200 border-b border-gray-700/50 pb-4 mb-4 flex items-center gap-2">
+                                <Package className="w-5 h-5 text-emerald-400" /> Product Details
+                            </h3>
+                            <div className="space-y-4 pr-2">
+                                {[
+                                    { label: 'Product Name', value: data.batch.product_name },
+                                    { label: 'Batch ID', value: data.batch.batch_id, mono: true },
+                                    { label: 'Category', value: data.batch.product_category || 'N/A' },
+                                    { label: 'SKU', value: data.batch.sku || 'N/A', mono: true },
+                                    { label: 'Manufacturer', value: data.batch.manufacturer_name || data.batch.manufacturer_address },
+                                    { label: 'Origin', value: data.batch.origin_location || 'N/A' },
+                                    { label: 'Produced', value: data.batch.production_date ? new Date(data.batch.production_date).toLocaleDateString() : '—' },
+                                    { label: 'Chain Status', value: data.verification.supplyChainComplete ? '✓ Complete' : 'In Progress', warn: !data.verification.supplyChainComplete },
+                                ].map((item) => (
+                                    <div key={item.label} className="grid grid-cols-3 gap-2 bg-gray-900/30 p-3 rounded-lg border border-gray-800/50">
+                                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider col-span-1 flex items-center">{item.label}</span>
+                                        <span className={`text-sm col-span-2 text-right ${item.warn ? 'text-amber-400' : item.mono ? 'font-mono text-emerald-400' : 'text-gray-200 font-medium'}`}>{item.value}</span>
                                     </div>
                                 ))}
                             </div>
-                        )}
+                        </div>
+                        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 flex flex-col items-center justify-center shadow-lg">
+                            <TrustScoreBadge score={data.verification.trustScore} />
+                        </div>
                     </div>
 
-                    {/* Leaflet Map */}
-                    {getMapLocations().length > 0 && (
-                        <Suspense fallback={
-                            <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 h-[400px] flex items-center justify-center">
-                                <p className="text-gray-500 text-sm">Loading map...</p>
-                            </div>
-                        }>
-                            <TrackingMap locations={getMapLocations()} />
-                        </Suspense>
-                    )}
-
-                    {/* Transaction History Table */}
-                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-700/50">
-                            <h2 className="text-base font-semibold text-gray-200">Transaction History</h2>
+                    {/* Movement History */}
+                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden shadow-lg">
+                        <div className="px-6 py-5 border-b border-gray-700/50 bg-gray-900/30">
+                            <h2 className="text-base font-semibold text-gray-200 flex items-center gap-2">
+                                <Clock className="w-5 h-5 text-amber-400" /> Product Movement History
+                            </h2>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="w-full">
+                            <table className="w-full text-left">
                                 <thead>
-                                    <tr className="text-xs text-gray-500 uppercase tracking-wider border-b border-gray-700/30">
-                                        <th className="text-left px-6 py-3 font-medium">Stage</th>
-                                        <th className="text-left px-6 py-3 font-medium">Actor</th>
-                                        <th className="text-left px-6 py-3 font-medium hidden sm:table-cell">Wallet Address</th>
-                                        <th className="text-left px-6 py-3 font-medium">Location</th>
-                                        <th className="text-left px-6 py-3 font-medium hidden md:table-cell">Timestamp</th>
-                                        <th className="text-left px-6 py-3 font-medium">Status</th>
+                                    <tr className="bg-gray-800/80 text-xs text-gray-400 uppercase tracking-widest border-b border-gray-700/50">
+                                        <th className="px-6 py-4 font-semibold">Stage</th>
+                                        <th className="px-6 py-4 font-semibold hidden sm:table-cell">Handler</th>
+                                        <th className="px-6 py-4 font-semibold">Location</th>
+                                        <th className="px-6 py-4 font-semibold hidden md:table-cell">Timestamp</th>
+                                        <th className="px-6 py-4 font-semibold text-right">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-700/20">
-                                    {/* Creation row */}
+                                <tbody className="divide-y divide-gray-700/30">
                                     <tr className="hover:bg-gray-700/20 transition-colors">
-                                        <td className="px-6 py-3.5 text-sm text-gray-300">Created</td>
-                                        <td className="px-6 py-3.5 text-sm text-gray-300">Manufacturer</td>
-                                        <td className="px-6 py-3.5 text-xs font-mono text-gray-400 hidden sm:table-cell truncate max-w-[140px]">
-                                            {data.batch.manufacturer_address}
+                                        <td className="px-6 py-4">
+                                            <p className="text-sm font-semibold text-gray-200">Product Created</p>
+                                            <p className="text-xs text-emerald-400">Manufacturer</p>
                                         </td>
-                                        <td className="px-6 py-3.5 text-sm text-gray-400">Origin</td>
-                                        <td className="px-6 py-3.5 text-xs text-gray-500 hidden md:table-cell">
-                                            {data.batch.created_at ? new Date(data.batch.created_at).toLocaleString() : '—'}
-                                        </td>
-                                        <td className="px-6 py-3.5"><StatusBadge status="CREATED" /></td>
+                                        <td className="px-6 py-4 text-sm text-gray-400 hidden sm:table-cell">{data.batch.manufacturer_name || data.batch.manufacturer_address}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-300 font-medium">{data.batch.origin_location || 'Origin'}</td>
+                                        <td className="px-6 py-4 text-xs text-gray-400 hidden md:table-cell">{data.batch.created_at ? new Date(data.batch.created_at).toLocaleString() : '—'}</td>
+                                        <td className="px-6 py-4 text-right"><StatusBadge status="CREATED" /></td>
                                     </tr>
-                                    {/* Transfer rows */}
                                     {data.transfers.map((transfer, i) => (
                                         <tr key={transfer.id || i} className="hover:bg-gray-700/20 transition-colors">
-                                            <td className="px-6 py-3.5 text-sm text-gray-300 capitalize">{transfer.to_role || `Transfer ${i + 1}`}</td>
-                                            <td className="px-6 py-3.5 text-sm text-gray-300 capitalize">{transfer.to_role || 'Actor'}</td>
-                                            <td className="px-6 py-3.5 text-xs font-mono text-gray-400 hidden sm:table-cell truncate max-w-[140px]">
-                                                {transfer.to_address}
+                                            <td className="px-6 py-4">
+                                                <p className="text-sm font-semibold text-gray-200">Custody Transfer</p>
+                                                <p className="text-xs text-blue-400">{transfer.from_role} → {transfer.to_role}</p>
                                             </td>
-                                            <td className="px-6 py-3.5 text-sm text-gray-400">{transfer.location || '—'}</td>
-                                            <td className="px-6 py-3.5 text-xs text-gray-500 hidden md:table-cell">
-                                                {new Date(transfer.timestamp).toLocaleString()}
-                                            </td>
-                                            <td className="px-6 py-3.5"><StatusBadge status={i === data.transfers.length - 1 ? 'IN_TRANSIT' : 'DELIVERED'} /></td>
+                                            <td className="px-6 py-4 text-sm text-gray-400 hidden sm:table-cell">{transfer.to_role}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-300 font-medium">{transfer.location || '—'}</td>
+                                            <td className="px-6 py-4 text-xs text-gray-400 hidden md:table-cell">{new Date(transfer.timestamp).toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right"><StatusBadge status={i === data.transfers.length - 1 ? 'IN_TRANSIT' : 'DELIVERED'} /></td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-                    {/* Batch Details + Trust Score */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6">
-                            <h3 className="text-base font-semibold text-gray-200 mb-4">Batch Information</h3>
-                            <div className="space-y-3">
-                                {[
-                                    { label: 'Batch ID', value: data.batch.batch_id, mono: true },
-                                    { label: 'Medicine', value: data.batch.medicine_name },
-                                    { label: 'Dosage', value: data.batch.dosage },
-                                    { label: 'Quantity', value: `${data.batch.quantity} units` },
-                                    { label: 'Mfg Date', value: data.batch.manufacturing_date ? new Date(data.batch.manufacturing_date).toLocaleDateString() : '—' },
-                                    { label: 'Exp Date', value: data.batch.expiry_date ? new Date(data.batch.expiry_date).toLocaleDateString() : '—', warn: data.verification.isExpired },
-                                ].map((item) => (
-                                    <div key={item.label} className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-500 uppercase tracking-wide">{item.label}</span>
-                                        <span className={`text-sm font-medium ${item.warn ? 'text-red-400' : item.mono ? 'font-mono text-emerald-400' : 'text-gray-200'}`}>
-                                            {item.value} {item.warn ? '⚠️ EXPIRED' : ''}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6">
-                            <h3 className="text-base font-semibold text-gray-200 mb-4">Trust & Authenticity</h3>
-                            <TrustScoreBadge score={data.verification.trustScore} size="lg" showBreakdown />
-                            <div className="mt-4 space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-xs text-gray-500">Supply Chain</span>
-                                    <span className={`text-sm font-medium ${data.verification.supplyChainComplete ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                        {data.verification.supplyChainComplete ? '✅ Complete' : '⚠️ Incomplete'}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-xs text-gray-500">Scan Count</span>
-                                    <span className="text-sm text-gray-200">{data.verification.scanCount}</span>
-                                </div>
-                                {data.verification.duplicateScans > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-xs text-gray-500">Duplicates</span>
-                                        <span className="text-sm text-red-400">{data.verification.duplicateScans} detected</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Empty state */}
-            {!data && !loading && !error && (
-                <div className="text-center py-20">
-                    <div className="w-20 h-20 bg-gray-800/50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-700/50">
-                        <MapPin className="w-8 h-8 text-gray-600" />
-                    </div>
-                    <h2 className="text-lg font-semibold text-gray-300 mb-2">Track a Medicine Batch</h2>
-                    <p className="text-sm text-gray-500 max-w-md mx-auto">
-                        Enter a Batch ID above to see its journey through the supply chain with real-time location tracking and verification status.
-                    </p>
                 </div>
             )}
         </DashboardShell>

@@ -62,7 +62,7 @@ export default function VerifyPage() {
         const r = role.toLowerCase();
         if (r.includes('manufacturer')) return <Package className="w-4 h-4" />;
         if (r.includes('distributor')) return <Truck className="w-4 h-4" />;
-        if (r.includes('pharmacy')) return <Building2 className="w-4 h-4" />;
+        if (r.includes('vendor')) return <Building2 className="w-4 h-4" />;
         return <Shield className="w-4 h-4" />;
     };
 
@@ -74,7 +74,7 @@ export default function VerifyPage() {
 
     return (
         <DashboardShell>
-            <PageHeader title="QR Verification" description="Verify medicine authenticity by batch ID" icon={QrCode} />
+            <PageHeader title="QR Verification" description="Verify product authenticity by batch ID" icon={QrCode} />
 
             {/* Search bar */}
             {!batchId && (
@@ -83,7 +83,7 @@ export default function VerifyPage() {
                         <div className="relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                             <input type="text" value={searchId} onChange={e => setSearchId(e.target.value)}
-                                placeholder="Enter Batch ID to verify (e.g., MED-2024-001)"
+                                placeholder="Enter Batch ID to verify (e.g., VRD-2024-001)"
                                 className="w-full pl-12 pr-28 py-4 bg-gray-800/60 border border-gray-700 rounded-xl text-gray-200 text-sm placeholder-gray-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-all" />
                             <button type="submit"
                                 className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 transition-colors">
@@ -134,8 +134,9 @@ export default function VerifyPage() {
                             <h3 className="text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wide">Batch Details</h3>
                             <div className="space-y-3">
                                 {[
-                                    { label: 'Medicine', value: data.batch.medicine_name },
-                                    { label: 'Dosage', value: data.batch.dosage },
+                                    { label: 'Product', value: data.batch.product_name },
+                                    { label: 'Category', value: data.batch.product_category },
+                                    { label: 'SKU', value: data.batch.sku || '—' },
                                     { label: 'Quantity', value: `${data.batch.quantity} units` },
                                     { label: 'Mfg Date', value: data.batch.manufacturing_date ? new Date(data.batch.manufacturing_date).toLocaleDateString() : '—' },
                                     { label: 'Exp Date', value: data.batch.expiry_date ? new Date(data.batch.expiry_date).toLocaleDateString() : '—', warn: data.verification.isExpired },

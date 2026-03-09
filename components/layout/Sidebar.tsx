@@ -49,10 +49,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
     const navItems = [
         { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-        { href: '/manufacturer', icon: Plus, label: 'Create Batch' },
+        { href: '/manufacturer', icon: Plus, label: 'Create' },
         { href: '/distributor', icon: ArrowLeftRight, label: 'Transfers' },
         { href: '/tracking', icon: MapPin, label: 'Live Tracking' },
-        { href: '/verify', icon: QrCode, label: 'QR Verify' },
+        { href: '/verify', icon: QrCode, label: 'Verify Product' },
         { href: '/analytics', icon: BarChart3, label: 'Analytics' },
         { href: '/hospital/bulk-verify', icon: ScanLine, label: 'Bulk Verify' },
         { href: '/admin', icon: Settings, label: 'Admin' },
@@ -69,7 +69,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <Shield className="w-8 h-8 text-emerald-400 flex-shrink-0" />
                 {!collapsed && (
                     <span className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                        MediChain
+                        Veridion
                     </span>
                 )}
             </div>

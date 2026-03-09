@@ -16,7 +16,7 @@ export function TrustIndicator({ status, reason, className }: TrustIndicatorProp
             color: 'text-green-600',
             bg: 'bg-green-50',
             border: 'border-green-200',
-            title: '✓ Genuine Medicine',
+            title: '✓ Genuine Product',
         },
         suspicious: {
             icon: AlertTriangle,

@@ -1,148 +1,95 @@
 'use client';
 
 import { QRCodeSVG } from 'qrcode.react';
-import { useState, useEffect } from 'react';
-import { generateSimpleQRCodeData, encodeQRCodeData } from '@/services/qrcode';
-import { generateQRCodeImage, downloadQRCodeImage, cleanupImageUrl } from '@/services/qrcode-api';
-import { Download, Copy, Check, AlertCircle } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Download, Copy, Check } from 'lucide-react';
 import { copyToClipboard } from '@/lib/utils';
 
 interface QRCodeGeneratorProps {
     batchId: string;
+    productName?: string;
+    manufacturer?: string;
+    category?: string;
+    sku?: string;
+    origin?: string;
 }
 
-export function QRCodeGenerator({ batchId }: QRCodeGeneratorProps) {
-    const [qrData, setQrData] = useState<string>('');
-    const [qrImageUrl, setQrImageUrl] = useState<string>('');
-    const [useApiImage, setUseApiImage] = useState<boolean>(true);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export function QRCodeGenerator({ batchId, productName, manufacturer, category, sku, origin }: QRCodeGeneratorProps) {
     const [copied, setCopied] = useState(false);
-    const [apiWarning, setApiWarning] = useState<string>('');
+    const qrRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        generateQR();
+    // Build a human-readable verification URL/data string
+    const verificationUrl = `https://medisecure.app/verify/${batchId}`;
 
-        // Cleanup on unmount
-        return () => {
-            if (qrImageUrl) {
-                cleanupImageUrl(qrImageUrl);
-            }
-        };
-    }, [batchId]);
-
-    const generateQR = async () => {
-        setLoading(true);
-        setError(null);
-        setApiWarning('');
-
-        try {
-            // Generate QR code data without MetaMask signature
-            const qrCodeData = generateSimpleQRCodeData(batchId);
-            const encoded = encodeQRCodeData(qrCodeData);
-            setQrData(encoded);
-
-            // Try to generate QR code using API
-            const apiResponse = await generateQRCodeImage({
-                data: encoded,
-                size: 512,
-                format: 'png',
-                errorCorrection: 'H',
-            });
-
-            if (apiResponse.success && apiResponse.imageUrl) {
-                setQrImageUrl(apiResponse.imageUrl);
-                setUseApiImage(true);
-            } else {
-                // Fallback to local generation
-                setUseApiImage(false);
-                setApiWarning(apiResponse.error || 'Using local QR generation');
-                console.log('Falling back to local QR generation:', apiResponse.error);
-            }
-        } catch (err: any) {
-            setError(err.message || 'Failed to generate QR code');
-            console.error('Failed to generate QR code:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // The QR code encodes a structured verification payload
+    const qrPayload = JSON.stringify({
+        v: 1, // version
+        id: batchId,
+        product: productName || 'N/A',
+        mfg: manufacturer || 'N/A',
+        cat: category || 'N/A',
+        sku: sku || 'N/A',
+        origin: origin || 'N/A',
+        ts: new Date().toISOString().split('T')[0],
+        url: verificationUrl,
+    });
 
     const downloadQR = () => {
-        if (useApiImage && qrImageUrl) {
-            // Download API-generated image
-            downloadQRCodeImage(qrImageUrl, `${batchId}-qr.png`);
-        } else {
-            // Download SVG (fallback method)
-            const canvas = document.getElementById(`qr-${batchId}`) as HTMLCanvasElement;
-            if (!canvas) return;
+        const svgEl = qrRef.current?.querySelector('svg');
+        if (!svgEl) return;
 
-            const svg = canvas.querySelector('svg');
-            if (!svg) return;
+        const svgData = new XMLSerializer().serializeToString(svgEl);
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
 
-            const svgData = new XMLSerializer().serializeToString(svg);
-            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-            const svgUrl = URL.createObjectURL(svgBlob);
-
-            const downloadLink = document.createElement('a');
-            downloadLink.href = svgUrl;
-            downloadLink.download = `${batchId}-qr.svg`;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            URL.revokeObjectURL(svgUrl);
-        }
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, 512, 512);
+                ctx.drawImage(img, 0, 0, 512, 512);
+                const pngUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = pngUrl;
+                link.download = `${batchId}-qr.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
     };
 
     const handleCopy = async () => {
-        const success = await copyToClipboard(qrData);
+        const success = await copyToClipboard(verificationUrl);
         if (success) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 text-base">
-                {error}
-            </div>
-        );
-    }
-
     return (
         <div className="flex flex-col items-center gap-4 p-6 bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700">
-            {apiWarning && (
-                <div className="w-full p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>{apiWarning}</span>
-                </div>
-            )}
+            <div ref={qrRef} className="p-4 bg-white rounded-lg">
+                <QRCodeSVG
+                    value={qrPayload}
+                    size={256}
+                    level="H"
+                    includeMargin={true}
+                />
+            </div>
 
-            <div id={`qr-${batchId}`} className="p-4 bg-white rounded-lg">
-                {useApiImage && qrImageUrl ? (
-                    <img
-                        src={qrImageUrl}
-                        alt="QR Code"
-                        width={256}
-                        height={256}
-                        className="block"
-                    />
-                ) : (
-                    <QRCodeSVG
-                        value={qrData}
-                        size={256}
-                        level="H"
-                        includeMargin={true}
-                    />
-                )}
+            {/* Product details shown below QR */}
+            <div className="w-full space-y-1.5 text-xs text-gray-400 bg-gray-900/50 p-3 rounded-lg border border-gray-700/50">
+                <div className="flex justify-between"><span className="text-gray-500">Batch ID</span><span className="font-mono text-emerald-400">{batchId}</span></div>
+                {productName && <div className="flex justify-between"><span className="text-gray-500">Product</span><span className="text-gray-200">{productName}</span></div>}
+                {manufacturer && <div className="flex justify-between"><span className="text-gray-500">Manufacturer</span><span className="text-gray-300">{manufacturer}</span></div>}
+                {category && <div className="flex justify-between"><span className="text-gray-500">Category</span><span className="text-gray-300">{category}</span></div>}
             </div>
 
             <div className="flex gap-2">
@@ -166,15 +113,15 @@ export function QRCodeGenerator({ batchId }: QRCodeGeneratorProps) {
                     ) : (
                         <>
                             <Copy className="w-4 h-4" />
-                            Copy Data
+                            Copy Link
                         </>
                     )}
                 </button>
             </div>
 
             <div className="text-sm text-gray-400 text-center max-w-xs">
-                This QR code contains batch information for verification.
-                {useApiImage && <span className="block mt-1 text-green-400">✓ Generated via QRCodeAPI.io</span>}
+                Scan to verify product authenticity.
+                <span className="block mt-1 text-green-400">✓ QR Code Generated</span>
             </div>
         </div>
     );

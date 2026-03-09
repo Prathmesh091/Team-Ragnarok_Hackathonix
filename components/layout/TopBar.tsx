@@ -8,13 +8,12 @@ import { ROLE_LABELS } from '@/lib/roles';
 // Map routes to readable names
 const routeNames: Record<string, string> = {
     '/dashboard': 'Dashboard',
-    '/manufacturer': 'Create Batch',
+    '/manufacturer': 'Create Product',
     '/distributor': 'Transfers',
-    '/pharmacy': 'Inventory',
+    '/vendor': 'Inventory',
     '/verify': 'QR Verification',
     '/analytics': 'Analytics',
-    '/admin': 'Admin Panel',
-    '/hospital/bulk-verify': 'Bulk Verification',
+    '/bulk-verify': 'Bulk Verification',
 };
 
 interface TopBarProps {

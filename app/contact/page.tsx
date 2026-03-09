@@ -124,7 +124,7 @@ export default function ContactPage() {
                                         <option value="">Select your role</option>
                                         <option value="manufacturer">Manufacturer</option>
                                         <option value="distributor">Distributor</option>
-                                        <option value="pharmacy">Pharmacy</option>
+                                        <option value="vendor">Vendor</option>
                                         <option value="hospital">Hospital</option>
                                         <option value="regulator">Regulator</option>
                                         <option value="patient">Patient/Consumer</option>
@@ -170,8 +170,8 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <h3 className="font-semibold mb-1">Email</h3>
-                                        <p className="text-blue-100">support@medichain.com</p>
-                                        <p className="text-blue-100">sales@medichain.com</p>
+                                        <p className="text-blue-100">support@veridion.com</p>
+                                        <p className="text-blue-100">sales@veridion.com</p>
                                     </div>
                                 </div>
 
@@ -207,7 +207,7 @@ export default function ContactPage() {
                             <h3 className="text-2xl font-bold mb-6">Quick Links</h3>
                             <div className="space-y-4">
                                 <Link href="/about" className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
-                                    <span className="font-semibold">About MediChain</span>
+                                    <span className="font-semibold">About Veridion</span>
                                     <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                                 </Link>
                                 <Link href="/how-it-works" className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
@@ -219,7 +219,7 @@ export default function ContactPage() {
                                     <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                                 </Link>
                                 <Link href="/verify" className="flex items-center justify-between p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors group">
-                                    <span className="font-semibold text-blue-600">Verify Medicine</span>
+                                    <span className="font-semibold text-blue-600">Verify Product</span>
                                     <ArrowRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-all" />
                                 </Link>
                             </div>
@@ -248,7 +248,7 @@ export default function ContactPage() {
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <a
-                            href="mailto:sales@medichain.com"
+                            href="mailto:sales@veridion.com"
                             className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:shadow-xl transition-all hover:scale-105 font-semibold"
                         >
                             Contact Sales Team
